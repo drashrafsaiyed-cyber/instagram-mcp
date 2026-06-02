@@ -1,65 +1,104 @@
-# Instagram MCP Server
+# 📸 Instagram MCP Server
 
-**Control your Instagram from Claude — on web, mobile, and desktop.**
+**Control your Instagram from Claude — post, analyze, reply to DMs, manage comments. All by chatting.**
 
-One-click deploy your own Instagram MCP server and connect it to Claude web (claude.ai) or Claude Desktop. Post photos, read insights, manage comments, and reply to DMs — all by chatting with Claude.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-FastMCP%203.x-green.svg)](https://github.com/jlowin/fastmcp)
+[![Deploy to Render](https://img.shields.io/badge/Deploy-Render%20Free-blue?logo=render)](https://render.com/deploy?repo=https://github.com/drashrafsaiyed-cyber/instagram-mcp)
 
 ---
 
-## ⚡ One-Click Deploy (Free)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drashrafsaiyed-cyber/instagram-mcp)
-
-> Free tier · No credit card · Always-on after first request
+<!-- Add your demo GIF here: record Claude Desktop controlling Instagram and drop the .gif below -->
+> 🎬 **Demo GIF coming soon** — Claude posting a reel, reading insights, replying to comments live on screen.
 
 ---
 
 ## What You Can Do
 
-| Area | Tools |
-|------|-------|
-| **Account** | `get_account_info`, `list_recent_media`, `get_account_insights` |
-| **Insights** | `get_media_insights` |
-| **Publishing** | `publish_photo`, `publish_reel`, `publish_carousel` |
-| **Comments** | `get_comments`, `reply_to_comment`, `hide_comment`, `delete_comment` |
-| **DMs** | `list_conversations`, `get_messages`, `send_dm` |
+Ask Claude in plain English. It handles the API.
+
+```
+"Show my last 10 posts and which got the most reach"
+"Post this image with caption: Monday motivation 💪 #AI #Health"
+"Read my DMs from today and draft replies for the questions"
+"Hide all spam comments on my latest reel"
+"What are my account insights for this week?"
+"Which of my reels got the best watch time?"
+```
 
 ---
 
-## Setup (3 steps, ~10 minutes)
+## Use Cases
 
-### Step 1 — Get your Instagram access token
+### 📊 Content Creator
+- Morning briefing: *"Show yesterday's post performance — reach, saves, shares"*
+- Strategy: *"Compare my last 5 reels by reach and tell me what worked"*
+- Scheduling prep: *"Draft 3 caption options for this fitness post"*
 
-1. Go to [Meta Developer Portal](https://developers.facebook.com) → create or open your app
-2. Add use case: **"Manage messaging & content on Instagram"**
-3. Go to **Use cases → Customize → API Setup with Instagram Login → Generate access tokens**
-4. Click **Generate token** next to your Instagram account → copy it
-5. Your **IG User ID** is shown below your username on that same page
+### 🏥 Doctor / Professional
+- Engagement: *"Reply to all comments on my last post professionally"*
+- Growth tracking: *"How many followers did I gain this week?"*
+- Content audit: *"List all posts from this month with their engagement rates"*
 
-> Token lasts 60 days. Refresh anytime:
-> ```
-> GET https://graph.instagram.com/refresh_access_token
->     ?grant_type=ig_refresh_token&access_token=YOUR_TOKEN
-> ```
+### 🛍️ Small Business
+- Customer service: *"Show DMs from the last 24 hours and reply to order questions"*
+- Publishing: *"Post this product photo with this caption and these hashtags"*
+- Analytics: *"Which post type (reel/carousel/photo) gets me the most reach?"*
 
-### Step 2 — Deploy to Render
+---
 
-1. Click the **Deploy to Render** button above
-2. Sign up / log in with GitHub (no card needed)
-3. Fill in the environment variables:
-   - `META_ACCESS_TOKEN` → your token from Step 1
-   - `IG_USER_ID` → your numeric Instagram account ID from Step 1
-4. Click **Deploy** — done in ~2 minutes
-5. Your server URL: `https://your-app-name.onrender.com/mcp`
+## Tools (14 total)
 
-### Step 3 — Connect to Claude
+| Category | Tool | What it does |
+|----------|------|-------------|
+| **Account** | `get_account_info` | Followers, bio, post count |
+| | `list_recent_media` | Last N posts with engagement stats |
+| | `get_account_insights` | Reach, profile views, follower growth |
+| **Insights** | `get_media_insights` | Per-post reach, saves, views, interactions |
+| **Publishing** | `publish_photo` | Post a photo with caption + hashtags |
+| | `publish_reel` | Post a Reel (video) |
+| | `publish_carousel` | Post 2–10 images as carousel |
+| **Comments** | `get_comments` | Read all comments on a post |
+| | `reply_to_comment` | Reply to a comment |
+| | `hide_comment` | Hide spam/unwanted comments |
+| | `delete_comment` | Permanently delete a comment |
+| **DMs** | `list_conversations` | List active DM threads |
+| | `get_messages` | Read messages in a thread |
+| | `send_dm` | Reply to a DM |
 
-**Claude Web + Mobile (claude.ai):**
-1. Settings → Integrations → Add Integration
-2. Paste: `https://your-app-name.onrender.com/mcp`
-3. New chat → *"Show my recent Instagram posts"* 🎉
+---
 
-**Claude Desktop:**
+## Quick Start
+
+### Option A — Claude Web + Mobile (Recommended)
+
+**1. Deploy your server (free, 2 min):**
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drashrafsaiyed-cyber/instagram-mcp)
+
+Fill in `META_ACCESS_TOKEN` and `IG_USER_ID` when prompted. ([How to get these ↓](#getting-your-token))
+
+**2. Connect to Claude web:**
+- [claude.ai](https://claude.ai) → Settings → Integrations → Add Integration
+- Paste: `https://your-app-name.onrender.com/mcp`
+
+**3. Done.** Open a new chat and try: *"Show my recent Instagram posts"*
+
+---
+
+### Option B — Claude Desktop (Local)
+
+```bash
+git clone https://github.com/drashrafsaiyed-cyber/instagram-mcp
+cd instagram-mcp
+uv sync
+cp .env.example .env
+# Fill .env with your token and user ID
+uv run server.py
+```
+
+Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -73,61 +112,97 @@ One-click deploy your own Instagram MCP server and connect it to Claude web (cla
 
 ---
 
-## Local Development
+## Getting Your Token
 
+This server uses the **Instagram Login API** (`graph.instagram.com`) — the modern Meta approach for Instagram Business/Creator accounts.
+
+**Step 1 — Create or open your Meta app**
+1. Go to [developers.facebook.com](https://developers.facebook.com) → My Apps
+2. Create a new app or open an existing one
+3. Add use case: **"Manage messaging & content on Instagram"**
+
+**Step 2 — Generate your access token**
+1. Use cases → Customize → **API Setup with Instagram Login**
+2. Step 2: **Generate access tokens** → click Generate next to your account
+3. Copy the token → this is your `META_ACCESS_TOKEN`
+4. Your numeric **IG User ID** is shown below your username on the same page
+
+**Step 3 — Refresh before expiry (60 days)**
 ```bash
-git clone https://github.com/drashrafsaiyed-cyber/instagram-mcp
-cd instagram-mcp
-uv sync
-cp .env.example .env
-# Fill .env with your token and user ID
-uv run server.py
+curl "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=YOUR_TOKEN"
 ```
-
----
-
-## Example Prompts
-
-Once connected, try these in Claude:
-
-- *"Show me my last 10 posts and their stats"*
-- *"Which of my recent reels got the best reach?"*
-- *"What are my account insights for this week?"*
-- *"Post this image [url] with caption: Friday vibes 🌅 #..."*
-- *"Show me all comments on my latest post and draft replies"*
-- *"List my DMs from today and tell me which need a reply"*
-
----
-
-## Important Notes
-
-- **Images/videos must be at public URLs** — Instagram fetches from your URL. Use Cloudinary, S3, or raw GitHub URLs. Local paths won't work.
-- **DMs: 24-hour window** — you can only reply to users who messaged you in the last 24 hours.
-- **Publishing limit: 50 posts/24h** per account.
-- **Free Render tier sleeps** after 15 min idle — first request takes ~30-50s to wake up, then it's fast.
+Or just run this in your project folder:
+```bash
+uv run python -c "
+import httpx, re
+from pathlib import Path
+env = Path('.env').read_text()
+token = re.search(r'META_ACCESS_TOKEN=(.+)', env).group(1).strip()
+r = httpx.get('https://graph.instagram.com/refresh_access_token', params={'grant_type':'ig_refresh_token','access_token':token})
+new = r.json()['access_token']
+Path('.env').write_text(env.replace(token, new))
+print('Refreshed. Expires in:', r.json()['expires_in']//86400, 'days')
+"
+```
 
 ---
 
 ## Requirements
 
 - Instagram **Business** or **Creator** account
-- Meta Developer app with **"Manage messaging & content on Instagram"** use case enabled
+- Meta Developer app with **"Manage messaging & content on Instagram"** use case
 - Python 3.11+
+
+> **Publishing note:** Images and videos must be at a public HTTPS URL — Instagram fetches from your URL. Use [Cloudinary](https://cloudinary.com) (free), S3, or a public GitHub raw URL. Local file paths won't work.
 
 ---
 
-## Tech Stack
+## Architecture
 
-- [FastMCP](https://github.com/jlowin/fastmcp) — MCP server framework
-- [Instagram Graph API](https://developers.facebook.com/docs/instagram-api) via `graph.instagram.com`
-- [uv](https://github.com/astral-sh/uv) — Python package manager
+```
+Claude (Web/Desktop)
+      │  MCP protocol
+      ▼
+instagram-mcp server  (FastMCP 3.x, streamable-http or stdio)
+      │  HTTPS REST
+      ▼
+graph.instagram.com   (Instagram Login API v21.0)
+      │
+      ▼
+Your Instagram account
+```
+
+**Why `graph.instagram.com` and not `graph.facebook.com`?**
+This server uses the newer Instagram Login API which issues `IGAA...` tokens and routes through `graph.instagram.com`. The older Facebook Graph API approach required a linked Facebook Page and `EAA...` tokens. The new flow is simpler — just your Instagram account, no Facebook Page needed.
+
+---
+
+## Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `Cannot parse access token` | Token expired or wrong type. Regenerate via the steps above. |
+| `code 100` on insights | Invalid metric name. Metrics differ between account vs media endpoints. |
+| `code 190` | Token expired. Run the refresh command. |
+| Container processing failed | Video too long (>90s), wrong codec, or URL returns 404 after first fetch. |
+| Empty DM list | No active 24h messaging window. Someone needs to DM you first. |
+| Claude doesn't see tools | Restart Claude Desktop fully (tray icon → Quit). Check logs at `%APPDATA%\Claude\logs\`. |
+
+---
+
+## Contributing
+
+PRs welcome. If you add a new tool or fix a metric name mismatch, please:
+1. Test against a real Instagram account
+2. Update the tool table in this README
+3. Note which API permission the new tool requires
 
 ---
 
 ## License
 
-MIT — free to use, fork, and deploy.
+MIT — free to use, fork, and deploy commercially.
 
 ---
 
-*Built with Claude Code*
+*Built with [FastMCP](https://github.com/jlowin/fastmcp) · Powered by [Instagram Graph API](https://developers.facebook.com/docs/instagram-api)*
