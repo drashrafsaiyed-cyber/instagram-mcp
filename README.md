@@ -1,157 +1,133 @@
 # Instagram MCP Server
 
-An MCP server that lets Claude publish, analyze, and engage on your Instagram Business account via the Meta Graph API.
+**Control your Instagram from Claude — on web, mobile, and desktop.**
 
-## What it does
+One-click deploy your own Instagram MCP server and connect it to Claude web (claude.ai) or Claude Desktop. Post photos, read insights, manage comments, and reply to DMs — all by chatting with Claude.
 
-**14 tools across four areas:**
+---
+
+## ⚡ One-Click Deploy (Free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drashrafsaiyed-cyber/instagram-mcp)
+
+> Free tier · No credit card · Always-on after first request
+
+---
+
+## What You Can Do
 
 | Area | Tools |
 |------|-------|
-| Account | `get_account_info`, `list_recent_media`, `get_account_insights` |
-| Publishing | `publish_photo`, `publish_reel`, `publish_carousel` |
-| Insights | `get_media_insights` |
-| Comments | `get_comments`, `reply_to_comment`, `hide_comment`, `delete_comment` |
-| DMs | `list_conversations`, `get_messages`, `send_dm` |
+| **Account** | `get_account_info`, `list_recent_media`, `get_account_insights` |
+| **Insights** | `get_media_insights` |
+| **Publishing** | `publish_photo`, `publish_reel`, `publish_carousel` |
+| **Comments** | `get_comments`, `reply_to_comment`, `hide_comment`, `delete_comment` |
+| **DMs** | `list_conversations`, `get_messages`, `send_dm` |
 
-## Prerequisites
+---
 
-1. **Instagram Business or Creator account** linked to a Facebook Page ✅ (you confirmed)
-2. **Meta Developer app** ✅ (you confirmed) — needs these products added:
-   - Instagram Graph API
-   - Facebook Login (for token generation)
-   - (Optional, for DMs) Messenger
-3. **Permissions/Scopes** on your access token:
-   - `instagram_basic`
-   - `instagram_content_publish`
-   - `instagram_manage_comments`
-   - `instagram_manage_messages` (for DMs)
-   - `pages_show_list`
-   - `pages_read_engagement`
-   - `pages_manage_metadata`
-4. **A way to host images/videos publicly** for publishing — Instagram fetches media from your URL. Use S3, Cloudinary, imgur, or a public GitHub raw URL.
+## Setup (3 steps, ~10 minutes)
 
-## Setup (PowerShell, Windows)
+### Step 1 — Get your Instagram access token
 
-```powershell
-# 1. Create the project folder
-cd "C:\Users\Ashraf Saiyed\mcp-servers"
-mkdir instagram-mcp
-cd instagram-mcp
+1. Go to [Meta Developer Portal](https://developers.facebook.com) → create or open your app
+2. Add use case: **"Manage messaging & content on Instagram"**
+3. Go to **Use cases → Customize → API Setup with Instagram Login → Generate access tokens**
+4. Click **Generate token** next to your Instagram account → copy it
+5. Your **IG User ID** is shown below your username on that same page
 
-# 2. Initialize with uv
-uv init .
-uv add "fastmcp>=3.0" httpx python-dotenv
+> Token lasts 60 days. Refresh anytime:
+> ```
+> GET https://graph.instagram.com/refresh_access_token
+>     ?grant_type=ig_refresh_token&access_token=YOUR_TOKEN
+> ```
 
-# 3. Drop server.py and .env.example into this folder (from this artifact)
+### Step 2 — Deploy to Render
 
-# 4. Create your real .env
-Copy-Item .env.example .env
-notepad .env    # fill in the three values
-```
+1. Click the **Deploy to Render** button above
+2. Sign up / log in with GitHub (no card needed)
+3. Fill in the environment variables:
+   - `META_ACCESS_TOKEN` → your token from Step 1
+   - `IG_USER_ID` → your numeric Instagram account ID from Step 1
+4. Click **Deploy** — done in ~2 minutes
+5. Your server URL: `https://your-app-name.onrender.com/mcp`
 
-## Getting your tokens & IDs
+### Step 3 — Connect to Claude
 
-### Step 1: Get a User Access Token
+**Claude Web + Mobile (claude.ai):**
+1. Settings → Integrations → Add Integration
+2. Paste: `https://your-app-name.onrender.com/mcp`
+3. New chat → *"Show my recent Instagram posts"* 🎉
 
-1. Go to **Meta Graph API Explorer**: https://developers.facebook.com/tools/explorer/
-2. Select your app from the top-right dropdown
-3. Click **"Generate Access Token"**, then add these permissions one by one:
-   - `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata`
-4. Click **Generate** → log in → approve.
-
-### Step 2: Find your Page ID and IG User ID
-
-In the Graph API Explorer, run:
-
-```
-GET  me/accounts
-```
-
-This lists your Pages. Copy the `id` of your target Page → that's your `PAGE_ID`.
-
-Then run (replace `{PAGE_ID}`):
-
-```
-GET  {PAGE_ID}?fields=instagram_business_account
-```
-
-The returned `instagram_business_account.id` is your `IG_USER_ID`.
-
-### Step 3: Get a long-lived Page token
-
-The token from Step 1 is a User token, valid ~1 hour. Convert to a long-lived (60-day) Page token:
-
-```
-GET  oauth/access_token
-     ?grant_type=fb_exchange_token
-     &client_id={YOUR_APP_ID}
-     &client_secret={YOUR_APP_SECRET}
-     &fb_exchange_token={SHORT_LIVED_USER_TOKEN}
-```
-
-Then get the Page token:
-
-```
-GET  {PAGE_ID}?fields=access_token&access_token={LONG_LIVED_USER_TOKEN}
-```
-
-Use this Page `access_token` as `META_ACCESS_TOKEN` in your `.env`. **Page tokens do not expire** as long as you periodically refresh the underlying User token.
-
-## Test before wiring to Claude
-
-```powershell
-# From the instagram-mcp folder
-npx @modelcontextprotocol/inspector uv run server.py
-```
-
-This opens a browser UI. Try calling `get_account_info` first — if your username comes back, your token is good. Then try `list_recent_media`. **Don't try publishing before you've verified read calls work.**
-
-## Wire into Claude Desktop
-
-Edit `%APPDATA%\Claude\claude_desktop_config.json` and add this under `mcpServers` (alongside your existing `github-writer`):
-
+**Claude Desktop:**
 ```json
 {
   "mcpServers": {
-    "github-writer": {
-      "command": "uv",
-      "args": ["--directory", "C:\\Users\\Ashraf Saiyed\\mcp-servers\\github-writer-mcp", "run", "server.py"]
-    },
     "instagram": {
       "command": "uv",
-      "args": ["--directory", "C:\\Users\\Ashraf Saiyed\\mcp-servers\\instagram-mcp", "run", "server.py"]
+      "args": ["--directory", "/path/to/instagram-mcp", "run", "server.py"]
     }
   }
 }
 ```
 
-**Fully quit Claude Desktop** (right-click the system tray icon → Quit, not just close the window) and reopen.
+---
 
-## Important caveats
+## Local Development
 
-- **Media URLs must be PUBLIC.** Instagram fetches from your URL. `localhost`, signed S3 URLs, and Drive links won't work. Use Cloudinary or commit images to a public GitHub repo and use the raw URL.
-- **DMs have a 24-hour window.** You can only DM users who messaged you within the last 24 hours. Cold outreach via DM is not possible (and would get you banned anyway).
-- **Publishing rate limit: 50 posts/24h** per account.
-- **Reels: max 90 seconds, max 1GB, MP4 H.264 + AAC.** Vertical 9:16 recommended.
-- **Carousels: 2-10 images**, all must be public URLs.
-- **Token refresh:** Page tokens don't expire, but if you change your password or revoke the User token, the Page token dies too. Regenerate via the steps above when that happens.
+```bash
+git clone https://github.com/drashrafsaiyed-cyber/instagram-mcp
+cd instagram-mcp
+uv sync
+cp .env.example .env
+# Fill .env with your token and user ID
+uv run server.py
+```
 
-## Troubleshooting
+---
 
-| Symptom | Fix |
-|---------|-----|
-| `code 190, subcode 463` | Token expired. Regenerate. |
-| `code 100` on publish | Image URL not accessible to Meta. Check it loads in incognito. |
-| `code 10, subcode 2207024` | Missing `instagram_content_publish` permission. |
-| `Container processing failed` | Video too long, wrong codec, or URL 404s after first fetch. |
-| DM tool errors | `PAGE_ID` not set, or you haven't subscribed your page to messaging webhooks. |
-| Claude doesn't see the tools | Fully quit + reopen Claude Desktop. Check `%APPDATA%\Claude\logs\mcp*.log`. |
+## Example Prompts
 
-## What you can ask Claude now
+Once connected, try these in Claude:
 
-- "Show me my last 10 posts and their like counts"
-- "Which of my recent reels got the best reach?"
-- "Post this photo with the caption: 'Friday vibes 🌅' and these hashtags: #..."
-- "List unanswered comments from the last 24 hours and draft replies"
-- "Summarize my DMs from today and tell me which ones need a personal reply"
+- *"Show me my last 10 posts and their stats"*
+- *"Which of my recent reels got the best reach?"*
+- *"What are my account insights for this week?"*
+- *"Post this image [url] with caption: Friday vibes 🌅 #..."*
+- *"Show me all comments on my latest post and draft replies"*
+- *"List my DMs from today and tell me which need a reply"*
+
+---
+
+## Important Notes
+
+- **Images/videos must be at public URLs** — Instagram fetches from your URL. Use Cloudinary, S3, or raw GitHub URLs. Local paths won't work.
+- **DMs: 24-hour window** — you can only reply to users who messaged you in the last 24 hours.
+- **Publishing limit: 50 posts/24h** per account.
+- **Free Render tier sleeps** after 15 min idle — first request takes ~30-50s to wake up, then it's fast.
+
+---
+
+## Requirements
+
+- Instagram **Business** or **Creator** account
+- Meta Developer app with **"Manage messaging & content on Instagram"** use case enabled
+- Python 3.11+
+
+---
+
+## Tech Stack
+
+- [FastMCP](https://github.com/jlowin/fastmcp) — MCP server framework
+- [Instagram Graph API](https://developers.facebook.com/docs/instagram-api) via `graph.instagram.com`
+- [uv](https://github.com/astral-sh/uv) — Python package manager
+
+---
+
+## License
+
+MIT — free to use, fork, and deploy.
+
+---
+
+*Built with Claude Code*

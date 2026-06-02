@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: instagram-mcp
+    runtime: python
+    buildCommand: uv sync --frozen && uv cache prune --ci
+    startCommand: uv run server.py
+    plan: free
+    envVars:
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: IG_USER_ID
+        sync: false
+      - key: MCP_TRANSPORT
+        value: http
+      - key: PORT
+        value: 10000
