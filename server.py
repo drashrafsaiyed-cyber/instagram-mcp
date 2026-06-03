@@ -199,6 +199,53 @@ def get_account_insights(
         return result
 
 
+@mcp.tool()
+def update_profile(
+    biography: Annotated[
+        str | None,
+        Field(default=None, max_length=150, description="New bio text. Max 150 characters. Pass None to leave unchanged."),
+    ] = None,
+    website: Annotated[
+        str | None,
+        Field(default=None, description="New website URL (must start with http:// or https://). Pass None to leave unchanged."),
+    ] = None,
+) -> dict:
+    """Update your Instagram Business profile bio and/or website URL.
+
+    THIS IS A WRITE OPERATION. At least one of biography or website must be provided.
+    Changes are live immediately on your public profile.
+
+    Required permission: instagram_business_manage_profile
+    (Add this in your Meta app → Use cases → Permissions and features if missing.)
+    """
+    if biography is None and website is None:
+        raise ValueError("Provide at least one field to update: biography or website.")
+
+    params: dict = {"access_token": ACCESS_TOKEN}
+    if biography is not None:
+        params["biography"] = biography
+    if website is not None:
+        params["website"] = website
+
+    with _client() as client:
+        resp = client.post(
+            f"{GRAPH}/me",
+            params=params,
+        )
+        result = _check(resp, "update_profile")
+        # Fetch current profile to confirm what changed
+        verify = client.get(
+            f"{GRAPH}/me",
+            params={"fields": "username,biography,website", "access_token": ACCESS_TOKEN},
+        )
+        current = verify.json() if verify.status_code == 200 else {}
+        return {
+            "success": result.get("success", True),
+            "updated_fields": {k: v for k, v in params.items() if k != "access_token"},
+            "current_profile": current,
+        }
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Tools — Publishing
 # ────────────────────────────────────────────────────────────────────────────

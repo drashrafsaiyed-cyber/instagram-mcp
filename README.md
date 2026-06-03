@@ -53,6 +53,7 @@ Ask Claude in plain English. It handles the API.
 | Category | Tool | What it does |
 |----------|------|-------------|
 | **Account** | `get_account_info` | Followers, bio, post count |
+| | `update_profile` | Update bio text and/or website URL |
 | | `list_recent_media` | Last N posts with engagement stats |
 | | `get_account_insights` | Reach, profile views, follower growth |
 | **Insights** | `get_media_insights` | Per-post reach, saves, views, interactions |
