@@ -40,7 +40,9 @@ load_dotenv(Path(__file__).parent / ".env")
 
 ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN")
 IG_USER_ID = os.environ.get("IG_USER_ID")
-# PAGE_ID no longer needed — Instagram Login flow uses /me for all DM endpoints
+# ACCOUNT_NAME labels this instance so Claude knows which account it's talking to.
+# Set it per-instance: "Dr. Ashraf (Personal)", "Surgicare ICU", "Pushpam", "Anita AI"
+ACCOUNT_NAME = os.environ.get("ACCOUNT_NAME", "Instagram")
 
 if not ACCESS_TOKEN:
     print("FATAL: META_ACCESS_TOKEN env var required. Create a .env file.", file=sys.stderr)
@@ -51,7 +53,8 @@ if not IG_USER_ID:
 
 GRAPH = "https://graph.instagram.com/v21.0"
 
-mcp = FastMCP("instagram")
+# MCP server name = account name so Claude's tool picker shows the right label
+mcp = FastMCP(ACCOUNT_NAME)
 
 
 # ────────────────────────────────────────────────────────────────────────────
