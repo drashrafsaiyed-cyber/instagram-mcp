@@ -553,6 +553,270 @@ def send_dm(
         return {"message_id": data.get("message_id"), "recipient": recipient_igsid}
 
 
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Engagement (likes)
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def like_media(
+    media_id: Annotated[str, Field(description="Media ID from list_recent_media to like")],
+) -> dict:
+    """Like a post or reel on your account.
+
+    THIS IS A WRITE OPERATION. Requires instagram_manage_engagement permission.
+    """
+    with _client() as client:
+        resp = client.post(
+            f"{GRAPH}/{media_id}/likes",
+            params={"access_token": ACCESS_TOKEN},
+        )
+        _check(resp, "like_media")
+        return {"media_id": media_id, "liked": True}
+
+
+@mcp.tool()
+def unlike_media(
+    media_id: Annotated[str, Field(description="Media ID to unlike")],
+) -> dict:
+    """Unlike a post or reel.
+
+    THIS IS A WRITE OPERATION. Requires instagram_manage_engagement permission.
+    """
+    with _client() as client:
+        resp = client.delete(
+            f"{GRAPH}/{media_id}/likes",
+            params={"access_token": ACCESS_TOKEN},
+        )
+        _check(resp, "unlike_media")
+        return {"media_id": media_id, "liked": False}
+
+
+@mcp.tool()
+def like_comment(
+    comment_id: Annotated[str, Field(description="Comment ID from get_comments to like")],
+) -> dict:
+    """Like a comment on a post.
+
+    THIS IS A WRITE OPERATION. Requires instagram_manage_engagement permission.
+    """
+    with _client() as client:
+        resp = client.post(
+            f"{GRAPH}/{comment_id}/likes",
+            params={"access_token": ACCESS_TOKEN},
+        )
+        _check(resp, "like_comment")
+        return {"comment_id": comment_id, "liked": True}
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Content Management
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def delete_post(
+    media_id: Annotated[str, Field(description="Media ID from list_recent_media to permanently delete")],
+) -> dict:
+    """Permanently delete a post, reel, or carousel from your account.
+
+    THIS IS A WRITE/DESTRUCTIVE OPERATION. Cannot be undone. Double-check the
+    media_id with list_recent_media before deleting. Requires instagram_manage_contents permission.
+    """
+    with _client() as client:
+        resp = client.delete(
+            f"{GRAPH}/{media_id}",
+            params={"access_token": ACCESS_TOKEN},
+        )
+        _check(resp, "delete_post")
+        return {"media_id": media_id, "deleted": True}
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Hashtag Search
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def search_hashtag(
+    hashtag: Annotated[str, Field(description="Hashtag to search (without the # symbol, e.g. 'AIHealth')")],
+    media_type: Annotated[
+        Literal["top_media", "recent_media"],
+        Field(default="top_media", description="'top_media' for best performing, 'recent_media' for latest"),
+    ] = "top_media",
+    limit: Annotated[int, Field(ge=1, le=50, default=10)] = 10,
+) -> list[dict]:
+    """Search public Instagram posts by hashtag.
+
+    Returns post IDs, captions, media type, and permalink. Useful for content
+    research, competitor analysis, and finding trending topics in your niche.
+    Requires Instagram Public Content Access permission.
+
+    Note: Instagram limits hashtag searches to 30 unique hashtags per 7 days per account.
+    """
+    with _client() as client:
+        # Step 1: get hashtag ID
+        id_resp = client.get(
+            f"{GRAPH}/ig_hashtag_search",
+            params={
+                "user_id": IG_USER_ID,
+                "q": hashtag.lstrip("#"),
+                "access_token": ACCESS_TOKEN,
+            },
+        )
+        id_data = _check(id_resp, "search_hashtag (get ID)")
+        hashtag_id = id_data.get("data", [{}])[0].get("id")
+        if not hashtag_id:
+            raise ValueError(f"Hashtag #{hashtag} not found.")
+
+        # Step 2: get media
+        media_resp = client.get(
+            f"{GRAPH}/{hashtag_id}/{media_type}",
+            params={
+                "user_id": IG_USER_ID,
+                "fields": "id,caption,media_type,permalink,like_count,comments_count",
+                "limit": limit,
+                "access_token": ACCESS_TOKEN,
+            },
+        )
+        data = _check(media_resp, "search_hashtag (get media)")
+        return data.get("data", [])
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Events
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def list_events() -> list[dict]:
+    """List upcoming events on your Instagram account.
+
+    Requires instagram_manage_upcoming_events permission.
+    Useful for hospital open days, health camps, webinars, AI workshops.
+    """
+    with _client() as client:
+        resp = client.get(
+            f"{GRAPH}/me/upcoming_events",
+            params={
+                "fields": "id,title,start_time,end_time,description,location",
+                "access_token": ACCESS_TOKEN,
+            },
+        )
+        data = _check(resp, "list_events")
+        return data.get("data", [])
+
+
+@mcp.tool()
+def create_event(
+    title: Annotated[str, Field(description="Event title")],
+    start_time: Annotated[str, Field(description="Start time in ISO 8601 format, e.g. '2026-07-15T10:00:00+05:30'")],
+    end_time: Annotated[str, Field(description="End time in ISO 8601 format")],
+    description: Annotated[str, Field(default="", description="Event description")] = "",
+    location: Annotated[str, Field(default="", description="Location name or address")] = "",
+) -> dict:
+    """Create an upcoming event on your Instagram profile.
+
+    THIS IS A WRITE OPERATION. Requires instagram_manage_upcoming_events permission.
+    Great for hospital health camps, free checkup days, AI workshops, webinars.
+    """
+    with _client() as client:
+        params = {
+            "title": title,
+            "start_time": start_time,
+            "end_time": end_time,
+            "access_token": ACCESS_TOKEN,
+        }
+        if description:
+            params["description"] = description
+        if location:
+            params["location"] = location
+
+        resp = client.post(
+            f"{GRAPH}/me/upcoming_events",
+            params=params,
+        )
+        data = _check(resp, "create_event")
+        return {"event_id": data.get("id"), "title": title, "start_time": start_time}
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Ads
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_ad_accounts() -> list[dict]:
+    """List all ad accounts linked to your Meta account.
+
+    Returns account IDs and names. Use the account ID with create_ad.
+    Requires ads_management permission.
+    """
+    with _client() as client:
+        resp = client.get(
+            f"{GRAPH}/me/adaccounts",
+            params={
+                "fields": "id,name,currency,account_status,amount_spent",
+                "access_token": ACCESS_TOKEN,
+            },
+        )
+        data = _check(resp, "get_ad_accounts")
+        return data.get("data", [])
+
+
+@mcp.tool()
+def get_ad_insights(
+    ad_account_id: Annotated[str, Field(description="Ad account ID from get_ad_accounts (format: act_XXXXXXXX)")],
+    date_preset: Annotated[
+        Literal["today", "yesterday", "last_7d", "last_30d", "this_month", "last_month"],
+        Field(default="last_7d"),
+    ] = "last_7d",
+) -> list[dict]:
+    """Get performance insights for your Instagram/Facebook ads.
+
+    Returns spend, impressions, reach, clicks, CPM, CTR.
+    Requires ads_read permission.
+    """
+    with _client() as client:
+        resp = client.get(
+            f"{GRAPH}/{ad_account_id}/insights",
+            params={
+                "fields": "campaign_name,spend,impressions,reach,clicks,cpm,ctr,actions",
+                "date_preset": date_preset,
+                "level": "campaign",
+                "access_token": ACCESS_TOKEN,
+            },
+        )
+        data = _check(resp, "get_ad_insights")
+        return data.get("data", [])
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tools — Human Agent DM (7-day window)
+# ────────────────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def send_human_agent_dm(
+    recipient_igsid: Annotated[str, Field(description="Recipient IGSID from get_messages")],
+    message: Annotated[str, Field(min_length=1, max_length=2000, description="Message text to send within 7-day window")],
+) -> dict:
+    """Send a DM reply within the 7-day Human Agent window (not just 24h).
+
+    THIS IS A WRITE OPERATION. Unlike send_dm (24h window), Human Agent tag allows
+    responding up to 7 days after the user's last message. Use for thoughtful replies
+    to patient queries, appointment questions, or follow-ups.
+    Requires Human Agent feature enabled in your Meta app.
+    """
+    with _client() as client:
+        resp = client.post(
+            f"{GRAPH}/me/messages",
+            json={
+                "recipient": {"id": recipient_igsid},
+                "message": {"text": message},
+                "messaging_type": "MESSAGE_TAG",
+                "tag": "HUMAN_AGENT",
+            },
+            params={"access_token": ACCESS_TOKEN},
+        )
+        data = _check(resp, "send_human_agent_dm")
+        return {"message_id": data.get("message_id"), "recipient": recipient_igsid, "tag": "HUMAN_AGENT"}
+
+
 if __name__ == "__main__":
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport == "http":

@@ -64,9 +64,19 @@ Ask Claude in plain English. It handles the API.
 | | `reply_to_comment` | Reply to a comment |
 | | `hide_comment` | Hide spam/unwanted comments |
 | | `delete_comment` | Permanently delete a comment |
+| **Engagement** | `like_media` | Like a post or reel |
+| | `unlike_media` | Unlike a post or reel |
+| | `like_comment` | Like a comment |
+| **Content** | `delete_post` | Permanently delete a post |
+| **Hashtags** | `search_hashtag` | Search public posts by hashtag |
+| **Events** | `list_events` | List upcoming events |
+| | `create_event` | Create a new event (health camps, workshops) |
+| **Ads** | `get_ad_accounts` | List linked ad accounts |
+| | `get_ad_insights` | Get ad spend, reach, CTR |
 | **DMs** | `list_conversations` | List active DM threads |
 | | `get_messages` | Read messages in a thread |
-| | `send_dm` | Reply to a DM |
+| | `send_dm` | Reply to a DM (24h window) |
+| | `send_human_agent_dm` | Reply within 7-day Human Agent window |
 
 ---
 
