@@ -33,8 +33,6 @@ from typing import Annotated, Literal
 import httpx
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-from fastmcp.server.auth import OAuthProvider
-from fastmcp.server.auth.auth import ClientRegistrationOptions
 from pydantic import Field
 
 # Load .env from the same directory as this script
@@ -45,8 +43,6 @@ IG_USER_ID = os.environ.get("IG_USER_ID")
 # ACCOUNT_NAME labels this instance so Claude knows which account it's talking to.
 # Set it per-instance: "Dr. Ashraf (Personal)", "Surgicare ICU", "Pushpam", "Anita AI"
 ACCOUNT_NAME = os.environ.get("ACCOUNT_NAME", "Instagram")
-# PUBLIC_URL is the Render/cloud URL — required for OAuth metadata discovery by Claude web
-PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://localhost:10000")
 
 if not ACCESS_TOKEN:
     print("FATAL: META_ACCESS_TOKEN env var required. Create a .env file.", file=sys.stderr)
@@ -57,19 +53,10 @@ if not IG_USER_ID:
 
 GRAPH = "https://graph.instagram.com/v21.0"
 
-# OAuth provider — enables Claude web to register and authenticate with this server
-# Dynamic client registration is ON so Claude web can register itself automatically
-_oauth = OAuthProvider(
-    base_url=PUBLIC_URL,
-    client_registration_options=ClientRegistrationOptions(
-        enabled=True,
-        valid_scopes=["mcp"],
-        default_scopes=["mcp"],
-    ),
-)
-
+# No auth — Claude.ai supports unauthenticated remote MCP connectors.
+# The access token is held server-side in env vars, so the endpoint itself needs no sign-in.
 # MCP server name = account name so Claude's tool picker shows the right label
-mcp = FastMCP(ACCOUNT_NAME, auth=_oauth)
+mcp = FastMCP(ACCOUNT_NAME)
 
 
 # ────────────────────────────────────────────────────────────────────────────
