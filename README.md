@@ -105,11 +105,51 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "instagram": {
       "command": "uv",
-      "args": ["--directory", "/path/to/instagram-mcp", "run", "server.py"]
+      "args": ["--directory", "/path/to/instagram-mcp", "run", "server.py"],
+      "env": {
+        "META_ACCESS_TOKEN": "your_token",
+        "IG_USER_ID": "your_ig_user_id",
+        "ACCOUNT_NAME": "My Instagram"
+      }
     }
   }
 }
 ```
+
+---
+
+### Option C — Multiple Instagram Accounts (Claude Desktop)
+
+Run the **same server folder** multiple times with different env vars. Claude sees each as a separate named MCP and never confuses them.
+
+```json
+{
+  "mcpServers": {
+    "instagram-personal": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/instagram-mcp", "run", "server.py"],
+      "env": {
+        "META_ACCESS_TOKEN": "TOKEN_FOR_ACCOUNT_1",
+        "IG_USER_ID": "IG_USER_ID_1",
+        "ACCOUNT_NAME": "Personal"
+      }
+    },
+    "instagram-business": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/instagram-mcp", "run", "server.py"],
+      "env": {
+        "META_ACCESS_TOKEN": "TOKEN_FOR_ACCOUNT_2",
+        "IG_USER_ID": "IG_USER_ID_2",
+        "ACCOUNT_NAME": "My Business"
+      }
+    }
+  }
+}
+```
+
+Claude will show separate tools per account — *"Post this to My Business"* picks the right one automatically.
+
+> Each account must be a **Business or Creator** Instagram account, and must be added as a tester in your Meta app → Use cases → Step 2: Generate access tokens → Add account.
 
 ---
 
