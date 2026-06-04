@@ -44,6 +44,13 @@ IG_USER_ID = os.environ.get("IG_USER_ID")
 # Set it per-instance: "Dr. Ashraf (Personal)", "Surgicare ICU", "Pushpam", "Anita AI"
 ACCOUNT_NAME = os.environ.get("ACCOUNT_NAME", "Instagram")
 
+# API_FLOW selects which Instagram API surface to use:
+#   "instagram_login" (default) — graph.instagram.com, IGAA token, simple setup, subset of features
+#   "facebook_login"            — graph.facebook.com, EAA token, requires linked FB Page,
+#                                 unlocks likes, delete_post, events, ads, full hashtag search
+API_FLOW = os.environ.get("API_FLOW", "instagram_login")
+PAGE_ID = os.environ.get("PAGE_ID")  # required only for facebook_login DM tools
+
 if not ACCESS_TOKEN:
     print("FATAL: META_ACCESS_TOKEN env var required. Create a .env file.", file=sys.stderr)
     sys.exit(1)
@@ -51,7 +58,14 @@ if not IG_USER_ID:
     print("FATAL: IG_USER_ID env var required (your IG Business account ID).", file=sys.stderr)
     sys.exit(1)
 
-GRAPH = "https://graph.instagram.com/v21.0"
+if API_FLOW == "facebook_login":
+    GRAPH = "https://graph.facebook.com/v21.0"
+    BASE = f"/{IG_USER_ID}"               # account addressed by numeric ID
+    DM_BASE = f"/{PAGE_ID}" if PAGE_ID else f"/{IG_USER_ID}"  # DMs run through the linked Page
+else:
+    GRAPH = "https://graph.instagram.com/v21.0"
+    BASE = "/me"                          # account addressed by /me
+    DM_BASE = "/me"
 
 # No auth — Claude.ai supports unauthenticated remote MCP connectors.
 # The access token is held server-side in env vars, so the endpoint itself needs no sign-in.
@@ -119,7 +133,7 @@ def get_account_info() -> dict:
     """
     with _client() as client:
         resp = client.get(
-            f"{GRAPH}/me",
+            f"{GRAPH}{BASE}",
             params={
                 "fields": "username,name,biography,followers_count,follows_count,media_count,profile_picture_url",
                 "access_token": ACCESS_TOKEN,
@@ -139,7 +153,7 @@ def list_recent_media(
     """
     with _client() as client:
         resp = client.get(
-            f"{GRAPH}/me/media",
+            f"{GRAPH}{BASE}/media",
             params={
                 "fields": "id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count",
                 "limit": limit,
@@ -192,7 +206,7 @@ def get_account_insights(
     metrics = "reach,profile_views,follower_count,website_clicks,accounts_engaged,total_interactions"
     with _client() as client:
         resp = client.get(
-            f"{GRAPH}/me/insights",
+            f"{GRAPH}{BASE}/insights",
             params={"metric": metrics, "period": period, "access_token": ACCESS_TOKEN},
         )
         data = _check(resp, "get_account_insights")
@@ -234,13 +248,13 @@ def update_profile(
 
     with _client() as client:
         resp = client.post(
-            f"{GRAPH}/me",
+            f"{GRAPH}{BASE}",
             params=params,
         )
         result = _check(resp, "update_profile")
         # Fetch current profile to confirm what changed
         verify = client.get(
-            f"{GRAPH}/me",
+            f"{GRAPH}{BASE}",
             params={"fields": "username,biography,website", "access_token": ACCESS_TOKEN},
         )
         current = verify.json() if verify.status_code == 200 else {}
@@ -269,7 +283,7 @@ def publish_photo(
     with _client() as client:
         # Step 1: create container
         resp = client.post(
-            f"{GRAPH}/me/media",
+            f"{GRAPH}{BASE}/media",
             params={
                 "image_url": image_url,
                 "caption": caption,
@@ -284,7 +298,7 @@ def publish_photo(
 
         # Step 2: publish
         resp = client.post(
-            f"{GRAPH}/me/media_publish",
+            f"{GRAPH}{BASE}/media_publish",
             params={"creation_id": container_id, "access_token": ACCESS_TOKEN},
         )
         published = _check(resp, "publish_photo (publish)")
@@ -313,7 +327,7 @@ def publish_reel(
     with _client() as client:
         # Step 1: create reel container
         resp = client.post(
-            f"{GRAPH}/me/media",
+            f"{GRAPH}{BASE}/media",
             params={
                 "media_type": "REELS",
                 "video_url": video_url,
@@ -330,7 +344,7 @@ def publish_reel(
 
         # Step 2: publish
         resp = client.post(
-            f"{GRAPH}/me/media_publish",
+            f"{GRAPH}{BASE}/media_publish",
             params={"creation_id": container_id, "access_token": ACCESS_TOKEN},
         )
         published = _check(resp, "publish_reel (publish)")
@@ -359,7 +373,7 @@ def publish_carousel(
         children: list[str] = []
         for url in image_urls:
             resp = client.post(
-                f"{GRAPH}/me/media",
+                f"{GRAPH}{BASE}/media",
                 params={
                     "image_url": url,
                     "is_carousel_item": True,
@@ -371,7 +385,7 @@ def publish_carousel(
 
         # Step 2: create carousel container
         resp = client.post(
-            f"{GRAPH}/me/media",
+            f"{GRAPH}{BASE}/media",
             params={
                 "media_type": "CAROUSEL",
                 "children": ",".join(children),
@@ -386,7 +400,7 @@ def publish_carousel(
 
         # Step 3: publish
         resp = client.post(
-            f"{GRAPH}/me/media_publish",
+            f"{GRAPH}{BASE}/media_publish",
             params={"creation_id": container_id, "access_token": ACCESS_TOKEN},
         )
         published = _check(resp, "publish_carousel (publish)")
@@ -497,7 +511,7 @@ def list_conversations(
     """
     with _client() as client:
         resp = client.get(
-            f"{GRAPH}/me/conversations",
+            f"{GRAPH}{DM_BASE}/conversations",
             params={
                 "platform": "instagram",
                 "fields": "id,participants,updated_time,message_count",
@@ -542,13 +556,18 @@ def send_dm(
     you can only DM users who have messaged you within the last 24 hours, unless using
     a message tag (not supported in this tool). Cold DMs will fail and may trigger rate limits.
     """
+    payload: dict = {
+        "recipient": {"id": recipient_igsid},
+        "message": {"text": message},
+    }
+    # Facebook Login flow uses the Messenger Platform and needs a messaging_type
+    if API_FLOW == "facebook_login":
+        payload["messaging_type"] = "RESPONSE"
+
     with _client() as client:
         resp = client.post(
-            f"{GRAPH}/me/messages",
-            json={
-                "recipient": {"id": recipient_igsid},
-                "message": {"text": message},
-            },
+            f"{GRAPH}{DM_BASE}/messages",
+            json=payload,
             params={"access_token": ACCESS_TOKEN},
         )
         data = _check(resp, "send_dm")
@@ -695,7 +714,7 @@ def list_events() -> list[dict]:
     """
     with _client() as client:
         resp = client.get(
-            f"{GRAPH}/me/upcoming_events",
+            f"{GRAPH}{BASE}/upcoming_events",
             params={
                 "fields": "id,title,start_time,end_time,description,location",
                 "access_token": ACCESS_TOKEN,
@@ -731,7 +750,7 @@ def create_event(
             params["location"] = location
 
         resp = client.post(
-            f"{GRAPH}/me/upcoming_events",
+            f"{GRAPH}{BASE}/upcoming_events",
             params=params,
         )
         data = _check(resp, "create_event")
@@ -806,7 +825,7 @@ def send_human_agent_dm(
     """
     with _client() as client:
         resp = client.post(
-            f"{GRAPH}/me/messages",
+            f"{GRAPH}{DM_BASE}/messages",
             json={
                 "recipient": {"id": recipient_igsid},
                 "message": {"text": message},
