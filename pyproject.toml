@@ -1,7 +1,7 @@
 [project]
 name = "instagram-mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server to control Instagram from Claude AI - post photos, reels, carousels, reply to comments, send DMs, and get analytics"
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=3.0",
